@@ -7,10 +7,15 @@ unknown_code = 128
 epsilon = 1e-6
 epsilon_sqr = epsilon ** 2
 
-num_samples = 43100
-num_train = 34480
+# num_samples = 43100
+# num_train = 34480
+# # num_samples - num_train_samples
+# num_valid = 8620
+
+num_samples = 1000
+num_train = 800
 # num_samples - num_train_samples
-num_valid = 8620
+num_valid = 200
 
 # Training parameters
 num_workers = 1  # for data-loading; right now, only 1 works with h5py
@@ -22,13 +27,13 @@ checkpoint = None  # path to checkpoint, None if none
 # Set your paths here
 
 # path to provided foreground images
-fg_path = 'data/fg/'
+fg_path = 'data/fg/FG/'
 
 # path to provided alpha mattes
-a_path = 'data/mask/'
+a_path = 'data/mask/Alpha/'
 
 # Path to background images (MSCOCO)
-bg_path = 'data/bg/'
+bg_path = 'data/bg/train2014/'
 
 # Path to folder where you want the composited images to go
 out_path = 'data/merged/'

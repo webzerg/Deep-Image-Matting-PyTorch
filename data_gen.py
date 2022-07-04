@@ -70,6 +70,10 @@ def composite4(fg, bg, a, w, h):
 
 
 def process(im_name, bg_name):
+    # print("fg_path:", fg_path)
+    # print("im_name:", im_name)
+    # print("a_path:", fg_path)
+    # print("bg_name:", bg_name)
     im = cv.imread(fg_path + im_name)
     a = cv.imread(a_path + im_name, 0)
     h, w = im.shape[:2]
@@ -126,8 +130,11 @@ class DIMDataset(Dataset):
         name = self.names[i]
         fcount = int(name.split('.')[0].split('_')[0])
         bcount = int(name.split('.')[0].split('_')[1])
+        # print("bg_files.shape:", len(bg_files))
+        # print("bcount:", bcount)
         im_name = fg_files[fcount]
         bg_name = bg_files[bcount]
+
         img, alpha, fg, bg = process(im_name, bg_name)
 
         # crop size 320:640:480 = 1:1:1
@@ -166,9 +173,17 @@ class DIMDataset(Dataset):
 
 
 def gen_names():
-    num_fgs = 431
-    num_bgs = 43100
-    num_bgs_per_fg = 100
+    # num_fgs = 431
+    # num_bgs = 43100
+    # num_bgs_per_fg = 100
+
+    # num_fgs = 2000
+    # num_bgs = 200000
+    # num_bgs_per_fg = 100
+
+    num_fgs = 20
+    num_bgs = 1000
+    num_bgs_per_fg = 50
 
     names = []
     bcount = 0
