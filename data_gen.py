@@ -2,6 +2,9 @@ import math
 import os
 import random
 
+from PIL import Image
+import os
+
 import cv2 as cv
 import numpy as np
 import torch
@@ -144,6 +147,17 @@ class DIMDataset(Dataset):
         trimap = gen_trimap(alpha)
         x, y = random_choice(trimap, crop_size)
         img = safe_crop(img, x, y, crop_size)
+
+        # # save the raw input image before transform
+        # image_name = 'before_transform_' + str(i) + '.jpg'
+        # # image_raw = img.detach().cpu().numpy()[0, 0:3, :, :]
+        # image_raw = img
+        # image_data = (image_raw).astype(np.uint8)
+        # epoch_result_dir = '/Users/nizhao/xin/causal/code/webzerg/Deep-Image-Matting-PyTorch/out_result/'
+        # Image.fromarray(image_data, 'RGB').save(
+        #     os.path.join(epoch_result_dir, image_name)
+        # )
+
         alpha = safe_crop(alpha, x, y, crop_size)
 
         trimap = gen_trimap(alpha)
@@ -165,6 +179,16 @@ class DIMDataset(Dataset):
         y[0, :, :] = alpha / 255.
         mask = np.equal(trimap, 128).astype(np.float32)
         y[1, :, :] = mask
+
+        # # save the raw input image after transform
+        # image_name = 'after_transform_' + str(i) + '.jpg'
+        # # image_raw = img.detach().cpu().numpy()[0, 0:3, :, :]
+        # image_raw = img.detach().cpu().numpy()
+        # image_data = (image_raw).astype(np.uint8)
+        # epoch_result_dir = '/Users/nizhao/xin/causal/code/webzerg/Deep-Image-Matting-PyTorch/out_result/'
+        # Image.fromarray(image_data.transpose(1, 2, 0), 'RGB').save(
+        #     os.path.join(epoch_result_dir, image_name)
+        # )
 
         return x, y
 

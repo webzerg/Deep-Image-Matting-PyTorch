@@ -3,6 +3,9 @@ import torch
 from tensorboardX import SummaryWriter
 from torch import nn
 
+from PIL import Image
+import os
+
 from config import device, im_size, grad_clip, print_freq
 from data_gen import DIMDataset
 from models import DIMModel
@@ -98,6 +101,7 @@ def train_net(args):
 
 def train(train_loader, model, optimizer, epoch, logger):
     model.train()  # train mode (dropout and batchnorm is used)
+    epoch_result_dir = '/Users/nizhao/xin/causal/code/webzerg/Deep-Image-Matting-PyTorch/out_result/'
 
     losses = AverageMeter()
 
@@ -105,12 +109,45 @@ def train(train_loader, model, optimizer, epoch, logger):
     for i, (img, alpha_label) in enumerate(train_loader):
         # Move to GPU, if available
         img = img.type(torch.FloatTensor).to(device)  # [N, 4, 320, 320]
-        alpha_label = alpha_label.type(torch.FloatTensor).to(device)  # [N, 320, 320]
-        alpha_label = alpha_label.reshape((-1, 2, im_size * im_size))  # [N, 320*320]
+        alpha_label = alpha_label.type(torch.FloatTensor).to(device)  # in:32*2*320*320;  [N, 320, 320]
 
+        # save the label input image
+        image_name = 'alpha_epoch_' + str(epoch) + '_iteration_' + str(i) + '_input_.jpg'
+        image_raw = img.detach().cpu().numpy()[0, 0:3, :, :]
+        image_data = (image_raw*255).astype(np.uint8)
+        Image.fromarray(image_data.transpose(1, 2, 0), 'RGB').save(
+            os.path.join(epoch_result_dir, image_name)
+        )
+
+        # save the inoput trimap image
+        image_name = 'alpha_epoch_' + str(epoch) + '_iteration_' + str(i) + '_trimap_.jpg'
+        image_raw = img.detach().cpu().numpy()[0, 3, :, :]
+        image_data = (image_raw*255).astype(np.uint8)
+        Image.fromarray(image_data).save(
+            os.path.join(epoch_result_dir, image_name)
+        )
+
+        # save the label alpha image
+        image_name = 'alpha_epoch_' + str(epoch) + '_iteration_' + str(i) + '_label_.jpg'
+        image_raw = alpha_label.detach().cpu().numpy()[0, 0, :, :]
+        image_data = (image_raw*255).astype(np.uint8)
+        Image.fromarray(image_data).save(
+            os.path.join(epoch_result_dir, image_name)
+        )
+
+        alpha_label = alpha_label.reshape((-1, 2, im_size * im_size))  # out: 32*2*102400; [N, 320*320]
         # Forward prop.
         alpha_out = model(img)  # [N, 3, 320, 320]
-        alpha_out = alpha_out.reshape((-1, 1, im_size * im_size))  # [N, 320*320]
+
+        # save the out alpha image
+        image_name = 'alpha_epoch_' + str(epoch) + '_iteration_' + str(i) + '_out_.jpg'
+        image_raw = alpha_out.detach().cpu().numpy()[0, :, :]
+        image_data = (image_raw*255).astype(np.uint8)
+        Image.fromarray(image_data).save(
+            os.path.join(epoch_result_dir, image_name)
+        )
+
+        alpha_out = alpha_out.reshape((-1, 1, im_size * im_size))  # In: 32*320*320, out: 32*1*102400, old out: [N, 320*320]
 
         # Calculate loss
         # loss = criterion(alpha_out, alpha_label)
