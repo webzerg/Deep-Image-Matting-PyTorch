@@ -168,16 +168,28 @@ class DIMDataset(Dataset):
             trimap = np.fliplr(trimap)
             alpha = np.fliplr(alpha)
 
-        x = torch.zeros((4, im_size, im_size), dtype=torch.float)
+        x = torch.zeros((3, im_size, im_size), dtype=torch.float)
         img = img[..., ::-1]  # RGB
         img = transforms.ToPILImage()(img)
         img = self.transformer(img)
         x[0:3, :, :] = img
-        x[3, :, :] = torch.from_numpy(trimap.copy() / 255.)
+        # x[3, :, :] = torch.from_numpy(trimap.copy() / 255.)
 
         y = np.empty((2, im_size, im_size), dtype=np.float32)
         y[0, :, :] = alpha / 255.
-        mask = np.equal(trimap, 128).astype(np.float32)
+
+        # mask = np.equal(trimap, 128).astype(np.float32)
+        # y[1, :, :] = mask
+        """
+        pred_trimap_argmax
+        0: background
+        1: unknown
+        2: foreground
+        """
+        mask = np.zeros(alpha.shape)
+        mask.fill(1)
+        mask[alpha <= 0] = 0
+        mask[alpha >= 255] = 2
         y[1, :, :] = mask
 
         # # save the raw input image after transform

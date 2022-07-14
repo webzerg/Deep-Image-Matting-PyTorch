@@ -85,7 +85,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Train face network')
     # general
     # parser.add_argument('--end-epoch', type=int, default=1000, help='training epoch size.')
-    parser.add_argument('--end-epoch', type=int, default=6, help='training epoch size.')
+    parser.add_argument('--end-epoch', type=int, default=1000, help='training epoch size.')
     parser.add_argument('--lr', type=float, default=0.01, help='start learning rate')
     parser.add_argument('--lr-step', type=int, default=10, help='period of learning rate decay')
     parser.add_argument('--optimizer', default='sgd', help='optimizer')
@@ -126,12 +126,35 @@ def safe_crop(mat, x, y, crop_size=(im_size, im_size)):
 # predicted alpha values at each pixel. However, due to the non-differentiable property of
 # absolute values, we use the following loss function to approximate it.
 def alpha_prediction_loss(y_pred, y_true):
-    mask = y_true[:, 1, :]
-    diff = y_pred[:, 0, :] - y_true[:, 0, :]
-    diff = diff * mask
-    num_pixels = torch.sum(mask)
-    return torch.sum(torch.sqrt(torch.pow(diff, 2) + epsilon_sqr)) / (num_pixels + epsilon)
-
+    # # mask = y_true[:, 1, :]
+    # """
+    # pred_trimap_argmax
+    # 0: background
+    # 1: unknown
+    # 2: foreground
+    # """
+    # mask = torch.zeros(y_true.shape)
+    # mask[y_true == 1] = 1
+    # mask[y_true == 0] = 1 # F and B segment
+    #
+    # lossCe = trimap_loss(y_pred, y_true) * mask
+    #
+    # # second mask
+    # mask2 = torch.zeros(y_true.shape)
+    # mask2.fill(1)
+    # mask2[y_true == 1] = 0
+    # mask2[y_true == 0] = 0 # only focus undecided region
+    #
+    # diff2 = y_pred - y_true
+    # diff2 = diff2 * mask2
+    # num_pixels2 = torch.sum(mask2)
+    # loss2 = torch.sum(torch.sqrt(torch.pow(diff2, 2) + epsilon_sqr)) / (num_pixels2 + epsilon)
+    #
+    # # loss3
+    # loss3 = (y_pred - y_true) * (y_pred - y_true) * mask
+    # loss3 torch sum
+    # return loss1 + loss2 + loss3
+    return 1
 
 # compute the MSE error given a prediction, a ground truth and a trimap.
 # pred: the predicted alpha matte

@@ -25,7 +25,7 @@ def train_net(args):
 
     # Initialize / load checkpoint
     if checkpoint is None:
-        model = DIMModel(n_classes=1, in_channels=4, is_unpooling=True, pretrain=True)
+        model = DIMModel(n_classes=3, in_channels=3, is_unpooling=True, pretrain=True)
         model = nn.DataParallel(model)
 
         if args.optimizer == 'sgd':
@@ -98,6 +98,11 @@ def train_net(args):
         # Save checkpoint
         save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss, is_best)
 
+def trimap_loss(pred_trimap, gt_trimap):
+    loss = nn.CrossEntropyLoss()
+    # pred_vals = pred_trimap[:, 0, :]
+    # gt_vals = gt_trimap[:, 1, :]
+    return loss(pred_trimap, gt_trimap)
 
 def train(train_loader, model, optimizer, epoch, logger):
     model.train()  # train mode (dropout and batchnorm is used)
@@ -109,7 +114,8 @@ def train(train_loader, model, optimizer, epoch, logger):
     for i, (img, alpha_label) in enumerate(train_loader):
         # Move to GPU, if available
         img = img.type(torch.FloatTensor).to(device)  # [N, 4, 320, 320]
-        alpha_label = alpha_label.type(torch.FloatTensor).to(device)  # in:32*2*320*320;  [N, 320, 320]
+        gt_alpha = (alpha_label[:, 0, :, :].unsqueeze(1)).type(torch.FloatTensor).to(device)  # in:32*2*320*320;  [N, 320, 320]
+        gt_trimap = alpha_label[:, 1, :, :].type(torch.LongTensor).to(device)  # in:32*2*320*320;  [N, 320, 320]
 
         # save the label input image
         image_name = 'alpha_epoch_' + str(epoch) + '_iteration_' + str(i) + '_input_.jpg'
@@ -119,39 +125,59 @@ def train(train_loader, model, optimizer, epoch, logger):
             os.path.join(epoch_result_dir, image_name)
         )
 
-        # save the inoput trimap image
-        image_name = 'alpha_epoch_' + str(epoch) + '_iteration_' + str(i) + '_trimap_.jpg'
-        image_raw = img.detach().cpu().numpy()[0, 3, :, :]
+        # # save the output trimap image
+        # image_name = 'alpha_epoch_' + str(epoch) + '_iteration_' + str(i) + '_trimap_.jpg'
+        # image_raw = img.detach().cpu().numpy()[0, 3, :, :]
+        # image_data = (image_raw*255).astype(np.uint8)
+        # Image.fromarray(image_data).save(
+        #     os.path.join(epoch_result_dir, image_name)
+        # )
+
+        # save the label alpha image
+        image_name = 'alpha_epoch_' + str(epoch) + '_iteration_' + str(i) + '_label_.jpg'
+        image_raw = gt_alpha.detach().cpu().numpy()[0, 0, :, :]
         image_data = (image_raw*255).astype(np.uint8)
         Image.fromarray(image_data).save(
             os.path.join(epoch_result_dir, image_name)
         )
 
-        # save the label alpha image
-        image_name = 'alpha_epoch_' + str(epoch) + '_iteration_' + str(i) + '_label_.jpg'
-        image_raw = alpha_label.detach().cpu().numpy()[0, 0, :, :]
-        image_data = (image_raw*255).astype(np.uint8)
+        # save the tripmap GT image
+        image_name = 'trimap_epoch_' + str(epoch) + '_iteration_' + str(i) + '_label_.jpg'
+        image_raw = gt_trimap.detach().cpu().numpy()[0, :, :]
+        maskGT = np.zeros(image_raw.shape)
+        maskGT.fill(127)
+        maskGT[image_raw <= 0] = 0
+        maskGT[image_raw >= 2] = 255
+        image_data = maskGT.astype(np.uint8)
         Image.fromarray(image_data).save(
             os.path.join(epoch_result_dir, image_name)
         )
 
         alpha_label = alpha_label.reshape((-1, 2, im_size * im_size))  # out: 32*2*102400; [N, 320*320]
         # Forward prop.
-        alpha_out = model(img)  # [N, 3, 320, 320]
+        # alpha_out = model(img)  # In: [N, 3, 320, 320]
+        trimap_out = model(img)  # In: [N, 3, 320, 320]
 
-        # save the out alpha image
-        image_name = 'alpha_epoch_' + str(epoch) + '_iteration_' + str(i) + '_out_.jpg'
-        image_raw = alpha_out.detach().cpu().numpy()[0, :, :]
-        image_data = (image_raw*255).astype(np.uint8)
+        # save the out trimap image: trimap_out is N,3,320,320
+        trimap_argmax = trimap_out.argmax(dim=1)
+        image_name = 'trimap_epoch_' + str(epoch) + '_iteration_' + str(i) + '_out_.jpg'
+        image_raw = trimap_argmax.detach().cpu().numpy()[0, :, :]  #just plot first dim
+        maskOut = np.zeros(image_raw.shape)
+        maskOut.fill(127)
+        maskOut[image_raw <= 0] = 0
+        maskOut[image_raw >= 2] = 255
+        image_data = maskOut.astype(np.uint8)
         Image.fromarray(image_data).save(
             os.path.join(epoch_result_dir, image_name)
         )
 
-        alpha_out = alpha_out.reshape((-1, 1, im_size * im_size))  # In: 32*320*320, out: 32*1*102400, old out: [N, 320*320]
+        trimap_out = trimap_out.reshape((-1, 3, im_size * im_size))  # In: 32*320*320, out: 32*1*102400, old out: [N, 320*320]
+        gt_trimap_flat = gt_trimap.reshape((-1, im_size * im_size))
 
         # Calculate loss
         # loss = criterion(alpha_out, alpha_label)
-        loss = alpha_prediction_loss(alpha_out, alpha_label)
+        # loss = alpha_prediction_loss(alpha_out, alpha_label)
+        loss = trimap_loss(trimap_out, gt_trimap_flat) #alpha_label is 2 rows (alpha and mask(trimap))
 
         # Back prop.
         optimizer.zero_grad()
@@ -185,16 +211,28 @@ def valid(valid_loader, model, logger):
     for img, alpha_label in valid_loader:
         # Move to GPU, if available
         img = img.type(torch.FloatTensor).to(device)  # [N, 3, 320, 320]
-        alpha_label = alpha_label.type(torch.FloatTensor).to(device)  # [N, 320, 320]
-        alpha_label = alpha_label.reshape((-1, 2, im_size * im_size))  # [N, 320*320]
+        # alpha_label = alpha_label.type(torch.FloatTensor).to(device)  # [N, 320, 320]
+        # alpha_label = alpha_label.reshape((-1, 2, im_size * im_size))  # [N, 320*320]
+        gt_alpha = (alpha_label[:, 0, :, :].unsqueeze(1)).type(torch.FloatTensor).to(device)  # in:32*2*320*320;  [N, 320, 320]
+        gt_trimap = alpha_label[:, 1, :, :].type(torch.LongTensor).to(device)  # in:32*2*320*320;  [N, 320, 320]
+
 
         # Forward prop.
-        alpha_out = model(img)  # [N, 320, 320]
-        alpha_out = alpha_out.reshape((-1, 1, im_size * im_size))  # [N, 320*320]
+        # alpha_out = model(img)  # [N, 320, 320]
+        # alpha_out = alpha_out.reshape((-1, 1, im_size * im_size))  # [N, 320*320]
+
+        trimap_out = model(img)  # [N, 3, 320, 320]
+        trimap_out = trimap_out.reshape((-1, 3, im_size * im_size))  # In: 32*320*320, out: 32*1*102400, old out: [N, 320*320]
+        gt_trimap_flat = gt_trimap.reshape((-1, im_size * im_size))
 
         # Calculate loss
         # loss = criterion(alpha_out, alpha_label)
-        loss = alpha_prediction_loss(alpha_out, alpha_label)
+        # loss = alpha_prediction_loss(alpha_out, alpha_label)
+        loss = trimap_loss(trimap_out, gt_trimap_flat) #alpha_label is 2 rows (alpha and mask(trimap))
+
+        # Calculate loss
+        # loss = criterion(alpha_out, alpha_label)
+        # loss = alpha_prediction_loss(alpha_out, alpha_label)
 
         # Keep track of metrics
         losses.update(loss.item())
