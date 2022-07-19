@@ -2,7 +2,17 @@
 
 Deep Image Matting [paper](https://arxiv.org/abs/1703.03872) implementation in PyTorch.
 
-## Differences
+#1. testing/inference: whole image 
+#2. how to evaluate a trimap, a new metric to evaluate trimap, how to regard trimap is good
+#3. why the traditional trimap is not good: train uses the random kernel, use random kernel sizes, abslation study.
+# Testing uses the same kernel. uses the random kernels might be approximate the distribution. 随机核影响训练模型(new method or new constraint) 。
+#4. adjust weight, => design a new loss (how to penalize the model to not predict gray to white/black)
+#5. quatitatively and qualitatively evaluation 
+#6. Trimap generation 70% , alpha generation 10% SOTA methods to validate 
+#7. Test focal_loss 
+#8. adapative, focus trimap, focus BG/FG
+
+## Differences 
 
 1. "fc6" is dropped.
 2. Indices pooling.

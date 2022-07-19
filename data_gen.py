@@ -178,19 +178,20 @@ class DIMDataset(Dataset):
         y = np.empty((2, im_size, im_size), dtype=np.float32)
         y[0, :, :] = alpha / 255.
 
-        # mask = np.equal(trimap, 128).astype(np.float32)
-        # y[1, :, :] = mask
-        """
-        pred_trimap_argmax
-        0: background
-        1: unknown
-        2: foreground
-        """
-        mask = np.zeros(alpha.shape)
-        mask.fill(1)
-        mask[alpha <= 0] = 0
-        mask[alpha >= 255] = 2
+        mask = np.equal(trimap, 128).astype(np.float32)
         y[1, :, :] = mask
+
+        # """
+        # pred_trimap_argmax
+        # 0: background
+        # 1: unknown
+        # 2: foreground
+        # """
+        # mask = np.zeros(alpha.shape)
+        # mask.fill(1)
+        # mask[alpha <= 0] = 0
+        # mask[alpha >= 255] = 2
+        # y[1, :, :] = mask
 
         # # save the raw input image after transform
         # image_name = 'after_transform_' + str(i) + '.jpg'

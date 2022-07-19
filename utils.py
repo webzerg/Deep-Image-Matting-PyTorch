@@ -5,6 +5,7 @@ import os
 import cv2 as cv
 import numpy as np
 import torch
+from torch import nn
 
 from config import im_size, epsilon, epsilon_sqr
 
@@ -121,6 +122,38 @@ def safe_crop(mat, x, y, crop_size=(im_size, im_size)):
         ret = cv.resize(ret, dsize=(im_size, im_size), interpolation=cv.INTER_NEAREST)
     return ret
 
+def trimap_loss(pred_trimap, gt_trimap):
+    loss = nn.CrossEntropyLoss()
+    # loss = nn.L1Loss
+    # pred_vals = pred_trimap[:, 0, :]
+    # gt_vals = gt_trimap[:, 1, :]
+    return loss(pred_trimap, gt_trimap)
+
+def alpha_trimap_loss(y_pred, y_true, mask):
+    # loss = nn.CrossEntropyLoss()
+    # pred_vals = pred_trimap[:, 0, :]
+    # gt_vals = gt_trimap[:, 1, :]
+
+    y_pred_tri = torch.ones(y_pred.shape)
+    y_pred_tri[y_pred <= 0] = 0
+    y_pred_tri[y_pred >= 1] = 2
+
+    y_true_tri = torch.ones(y_true.shape)
+    y_true_tri[y_true <= 0] = 0
+    y_true_tri[y_true >= 1] = 2
+
+    diff = y_pred_tri - y_true_tri
+    diff = diff * mask
+    num_pixels = torch.sum(mask)
+    loss = torch.sum(torch.sqrt(torch.pow(diff, 2) + epsilon_sqr)) / (num_pixels + epsilon)
+    return loss
+
+    # return trimap_loss(y_pred_tri, y_true_tri) * mask
+
+
+# mask.fill(1)
+# mask[alpha <= 0] = 0
+# mask[alpha >= 255] = 2
 
 # alpha prediction loss: the abosolute difference between the ground truth alpha values and the
 # predicted alpha values at each pixel. However, due to the non-differentiable property of
@@ -133,28 +166,26 @@ def alpha_prediction_loss(y_pred, y_true):
     # 1: unknown
     # 2: foreground
     # """
-    # mask = torch.zeros(y_true.shape)
-    # mask[y_true == 1] = 1
-    # mask[y_true == 0] = 1 # F and B segment
-    #
-    # lossCe = trimap_loss(y_pred, y_true) * mask
-    #
-    # # second mask
-    # mask2 = torch.zeros(y_true.shape)
-    # mask2.fill(1)
-    # mask2[y_true == 1] = 0
-    # mask2[y_true == 0] = 0 # only focus undecided region
-    #
-    # diff2 = y_pred - y_true
-    # diff2 = diff2 * mask2
-    # num_pixels2 = torch.sum(mask2)
-    # loss2 = torch.sum(torch.sqrt(torch.pow(diff2, 2) + epsilon_sqr)) / (num_pixels2 + epsilon)
-    #
-    # # loss3
-    # loss3 = (y_pred - y_true) * (y_pred - y_true) * mask
-    # loss3 torch sum
-    # return loss1 + loss2 + loss3
-    return 1
+    mask = torch.zeros(y_true.shape)
+    mask[y_true == 1] = 1
+    mask[y_true == 0] = 1 # F and B segment
+    loss1 = alpha_trimap_loss(y_pred, y_true, mask)
+
+    # second mask
+    mask2 = torch.ones(y_true.shape)
+    mask2[y_true == 1] = 0
+    mask2[y_true == 0] = 0 # only focus undecided region
+
+    diff2 = y_pred - y_true
+    diff2 = diff2 * mask2
+    num_pixels2 = torch.sum(mask2)
+    loss2 = torch.sum(torch.sqrt(torch.pow(diff2, 2) + epsilon_sqr)) / (num_pixels2 + epsilon)
+
+    # loss3
+    diff3 = (y_pred - y_true) * (y_pred - y_true) * mask
+    num_pixels3 = torch.sum(mask)
+    loss3 = torch.sum(torch.sqrt(torch.pow(diff3, 2) + epsilon_sqr)) / (num_pixels3 + epsilon)
+    return loss1 + loss2 + loss3
 
 # compute the MSE error given a prediction, a ground truth and a trimap.
 # pred: the predicted alpha matte
