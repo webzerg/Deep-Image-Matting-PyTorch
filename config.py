@@ -39,8 +39,11 @@ bg_path = 'data/bg/train2014/'
 out_path = 'data/merged/'
 
 max_size = 1600
-fg_path_test = 'data/fg_test/'
-a_path_test = 'data/mask_test/'
-bg_path_test = 'data/bg_test/'
+# fg_path_test = 'data/fg_test/'
+# a_path_test = 'data/mask_test/'
+# bg_path_test = 'data/bg_test/'
+fg_path_test = 'data/fg/FG/'
+a_path_test = 'data/mask/Alpha/'
+bg_path_test = 'data/bg/train2014/'
 out_path_test = 'data/merged_test/'
 ##############################################################

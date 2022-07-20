@@ -81,7 +81,8 @@ def train_net(args):
         # One epoch's validation
         valid_loss = valid(valid_loader=valid_loader,
                            model=model,
-                           logger=logger)
+                           logger=logger,
+                           epoch=epoch)
 
         writer.add_scalar('Valid_Loss', valid_loss, epoch)
 
@@ -104,9 +105,10 @@ def trimap_loss(pred_trimap, gt_trimap):
     # gt_vals = gt_trimap[:, 1, :]
     return loss(pred_trimap, gt_trimap)
 
+epoch_result_dir = './out_result_new/'
+
 def train(train_loader, model, optimizer, epoch, logger):
     model.train()  # train mode (dropout and batchnorm is used)
-    epoch_result_dir = '/Users/nizhao/xin/causal/code/webzerg/Deep-Image-Matting-PyTorch/out_result/'
 
     losses = AverageMeter()
 
@@ -202,7 +204,7 @@ def train(train_loader, model, optimizer, epoch, logger):
     return losses.avg
 
 
-def valid(valid_loader, model, logger):
+def valid(valid_loader, model, logger, epoch):
     model.eval()  # eval mode (dropout and batchnorm is NOT used)
 
     losses = AverageMeter()
@@ -216,12 +218,55 @@ def valid(valid_loader, model, logger):
         gt_alpha = (alpha_label[:, 0, :, :].unsqueeze(1)).type(torch.FloatTensor).to(device)  # in:32*2*320*320;  [N, 320, 320]
         gt_trimap = alpha_label[:, 1, :, :].type(torch.LongTensor).to(device)  # in:32*2*320*320;  [N, 320, 320]
 
+        for i in range(7):
+            # save the label input image
+            image_name = 'valid_alpha_epoch_' + str(epoch) + '_img_' + str(i) + '_input_.jpg'
+            image_raw = img.detach().cpu().numpy()[i, 0:3, :, :]
+            image_data = (image_raw*255).astype(np.uint8)
+            Image.fromarray(image_data.transpose(1, 2, 0), 'RGB').save(
+                os.path.join(epoch_result_dir, image_name)
+            )
+
+            # save the label alpha image
+            image_name = 'valid_alpha_epoch_' + str(epoch) + '_img_' + str(i) + '_label_.jpg'
+            image_raw = gt_alpha.detach().cpu().numpy()[i, 0, :, :]
+            image_data = (image_raw*255).astype(np.uint8)
+            Image.fromarray(image_data).save(
+                os.path.join(epoch_result_dir, image_name)
+            )
+
+            # save the tripmap GT image
+            image_name = 'valid_trimap_epoch_' + str(epoch) + '_img_' + str(i) + '_label_.jpg'
+            image_raw = gt_trimap.detach().cpu().numpy()[i, :, :]
+            maskGT = np.zeros(image_raw.shape)
+            maskGT.fill(127)
+            maskGT[image_raw <= 0] = 0
+            maskGT[image_raw >= 2] = 255
+            image_data = maskGT.astype(np.uint8)
+            Image.fromarray(image_data).save(
+                os.path.join(epoch_result_dir, image_name)
+            )
 
         # Forward prop.
         # alpha_out = model(img)  # [N, 320, 320]
         # alpha_out = alpha_out.reshape((-1, 1, im_size * im_size))  # [N, 320*320]
 
         trimap_out = model(img)  # [N, 3, 320, 320]
+
+        for j in range(7):
+            # save the out trimap image: trimap_out is N,3,320,320
+            trimap_argmax = trimap_out.argmax(dim=1)
+            image_name = 'valid_trimap_epoch_' + str(epoch) + '_img_' + str(j) + '_out_.jpg'
+            image_raw = trimap_argmax.detach().cpu().numpy()[j, :, :]  #just plot first dim
+            maskOut = np.zeros(image_raw.shape)
+            maskOut.fill(127)
+            maskOut[image_raw <= 0] = 0
+            maskOut[image_raw >= 2] = 255
+            image_data = maskOut.astype(np.uint8)
+            Image.fromarray(image_data).save(
+                os.path.join(epoch_result_dir, image_name)
+            )
+
         trimap_out = trimap_out.reshape((-1, 3, im_size * im_size))  # In: 32*320*320, out: 32*1*102400, old out: [N, 320*320]
         gt_trimap_flat = gt_trimap.reshape((-1, im_size * im_size))
 

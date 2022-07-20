@@ -161,9 +161,14 @@ def alpha_prediction_loss(y_pred, y_true):
 # target: the ground truth alpha matte
 # trimap: the given trimap
 #
-def compute_mse(pred, alpha, trimap):
-    num_pixels = float((trimap == 128).sum())
+# def compute_mse(pred, alpha, trimap):
+#     num_pixels = float((trimap == 128).sum())
+#     return ((pred - alpha) ** 2).sum() / num_pixels
+
+def compute_mse(pred, alpha):
+    num_pixels = float(alpha.sum())
     return ((pred - alpha) ** 2).sum() / num_pixels
+
 
 
 # compute the SAD error given a prediction and a ground truth.
