@@ -58,7 +58,7 @@ def train_net(args):
             break
 
         if args.optimizer == 'sgd' and epochs_since_improvement > 0 and epochs_since_improvement % 2 == 0:
-            checkpoint = 'BEST_checkpoint_1.tar'
+            checkpoint = 'BEST_checkpoint_weight.tar'
             checkpoint = torch.load(checkpoint)
             model = checkpoint['model']
             optimizer = checkpoint['optimizer']
@@ -106,7 +106,7 @@ def trimap_loss(pred_trimap, gt_trimap):
     # gt_vals = gt_trimap[:, 1, :]
     return loss(pred_trimap, gt_trimap)
 
-epoch_result_dir = './out_result/'
+epoch_result_dir = './out_result_weight/'
 
 def train(train_loader, model, optimizer, epoch, logger):
     model.train()  # train mode (dropout and batchnorm is used)

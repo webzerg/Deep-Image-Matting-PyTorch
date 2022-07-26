@@ -12,10 +12,10 @@ epsilon_sqr = epsilon ** 2
 # # num_samples - num_train_samples
 # num_valid = 8620
 
-num_samples = 1000
-num_train = 800
+num_samples = 5000
+num_train = 4000
 # num_samples - num_train_samples
-num_valid = 200
+num_valid = 1000
 
 # Training parameters
 num_workers = 1  # for data-loading; right now, only 1 works with h5py

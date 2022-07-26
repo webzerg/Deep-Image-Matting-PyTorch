@@ -218,9 +218,13 @@ def gen_names():
     # num_bgs_per_fg = 100
 
     # xin's test on local
-    num_fgs = 20
-    num_bgs = 1000
-    num_bgs_per_fg = 50
+    # num_fgs = 200
+    # num_bgs = 1000
+    # num_bgs_per_fg = 50
+
+    num_fgs = 250
+    num_bgs = 5000
+    num_bgs_per_fg = 20
 
     names = []
     bcount = 0
