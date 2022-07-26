@@ -100,7 +100,7 @@ def train_net(args):
         save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss, is_best)
 
 def trimap_loss(pred_trimap, gt_trimap):
-    class_weights = torch.tensor([1.0, 3.0, 1.0], dtype=torch.float)
+    class_weights = torch.tensor([1.0, 3.0, 1.0], dtype=torch.float).to(device)
     loss = nn.CrossEntropyLoss(weight=class_weights)
     # pred_vals = pred_trimap[:, 0, :]
     # gt_vals = gt_trimap[:, 1, :]
