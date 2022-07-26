@@ -106,7 +106,16 @@ def trimap_loss(pred_trimap, gt_trimap):
     # gt_vals = gt_trimap[:, 1, :]
     return loss(pred_trimap, gt_trimap)
 
-epoch_result_dir = './out_result_new/'
+epoch_result_dir = './out_result_focal_w/'
+
+focal_loss = torch.hub.load(
+    'adeelh/pytorch-multi-class-focal-loss',
+    model='FocalLoss',
+    alpha=torch.tensor([0.25, 0.75, 0.25]),
+    gamma=2,
+    reduction='mean',
+    force_reload=False
+)
 
 def train(train_loader, model, optimizer, epoch, logger):
     model.train()  # train mode (dropout and batchnorm is used)
@@ -180,7 +189,9 @@ def train(train_loader, model, optimizer, epoch, logger):
         # Calculate loss
         # loss = criterion(alpha_out, alpha_label)
         # loss = alpha_prediction_loss(alpha_out, alpha_label)
-        loss = trimap_loss(trimap_out, gt_trimap_flat) #alpha_label is 2 rows (alpha and mask(trimap))
+
+        # loss = trimap_loss(trimap_out, gt_trimap_flat) #alpha_label is 2 rows (alpha and mask(trimap))
+        loss = focal_loss(trimap_out, gt_trimap_flat)  # alpha_label is 2 rows (alpha and mask(trimap))
 
         # Back prop.
         optimizer.zero_grad()

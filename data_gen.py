@@ -217,6 +217,7 @@ def gen_names():
     # num_bgs = 200000
     # num_bgs_per_fg = 100
 
+    # xin's test on local
     num_fgs = 20
     num_bgs = 1000
     num_bgs_per_fg = 50
