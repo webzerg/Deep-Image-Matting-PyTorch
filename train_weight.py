@@ -48,9 +48,9 @@ def train_net(args):
 
     # Custom dataloaders
     train_dataset = DIMDataset('train')
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=16)
     valid_dataset = DIMDataset('valid')
-    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False, num_workers=8)
+    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False, num_workers=16)
 
     # Epochs
     for epoch in range(start_epoch, args.end_epoch):
@@ -58,7 +58,7 @@ def train_net(args):
             break
 
         if args.optimizer == 'sgd' and epochs_since_improvement > 0 and epochs_since_improvement % 2 == 0:
-            checkpoint = 'BEST_checkpoint_weight.tar'
+            checkpoint = 'BEST_checkpoint.tar'
             checkpoint = torch.load(checkpoint)
             model = checkpoint['model']
             optimizer = checkpoint['optimizer']
@@ -121,7 +121,7 @@ def train(train_loader, model, optimizer, epoch, logger):
         gt_trimap = alpha_label[:, 1, :, :].type(torch.LongTensor).to(device)  # in:32*2*320*320;  [N, 320, 320]
 
         # save the label input image
-        image_name = 'alpha_epoch_' + str(epoch) + '_iteration_' + str(i) + '_input_.jpg'
+        image_name = 'trimap_alpha_epoch_' + str(epoch) + '_iteration_' + str(i) + '_input_.jpg'
         image_raw = img.detach().cpu().numpy()[0, 0:3, :, :]
         image_data = (image_raw*255).astype(np.uint8)
         Image.fromarray(image_data.transpose(1, 2, 0), 'RGB').save(
@@ -137,7 +137,7 @@ def train(train_loader, model, optimizer, epoch, logger):
         # )
 
         # save the label alpha image
-        image_name = 'alpha_epoch_' + str(epoch) + '_iteration_' + str(i) + '_label_.jpg'
+        image_name = 'trimap_alpha_epoch_' + str(epoch) + '_iteration_' + str(i) + '_label_.jpg'
         image_raw = gt_alpha.detach().cpu().numpy()[0, 0, :, :]
         image_data = (image_raw*255).astype(np.uint8)
         Image.fromarray(image_data).save(
@@ -221,7 +221,7 @@ def valid(valid_loader, model, logger, epoch):
 
         for i in range(6):
             # save the label input image
-            image_name = 'valid_alpha_epoch_' + str(epoch) + '_img_' + str(i) + '_input_.jpg'
+            image_name = 'valid_trimap_alpha_epoch_' + str(epoch) + '_img_' + str(i) + '_input_.jpg'
             image_raw = img.detach().cpu().numpy()[i, 0:3, :, :]
             image_data = (image_raw*255).astype(np.uint8)
             Image.fromarray(image_data.transpose(1, 2, 0), 'RGB').save(
@@ -229,7 +229,7 @@ def valid(valid_loader, model, logger, epoch):
             )
 
             # save the label alpha image
-            image_name = 'valid_alpha_epoch_' + str(epoch) + '_img_' + str(i) + '_label_.jpg'
+            image_name = 'valid_trimap_alpha_epoch_' + str(epoch) + '_img_' + str(i) + '_label_.jpg'
             image_raw = gt_alpha.detach().cpu().numpy()[i, 0, :, :]
             image_data = (image_raw*255).astype(np.uint8)
             Image.fromarray(image_data).save(
